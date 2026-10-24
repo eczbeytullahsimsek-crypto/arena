@@ -1,6 +1,6 @@
 # Papertrail — Android tablet not defteri
 
-GoodNotes'tan ilham alan, Kotlin + Jetpack Compose ile hazırlanmış tablet öncelikli not alma uygulaması başlangıç projesi. Sıcak defter kapakları, sade bir not rafı ve dikkat dağıtmayan yazı alanını bir araya getirir.
+GoodNotes'tan ilham alan, Kotlin + Jetpack Compose Foundation üzerinde Material 3 bileşenleri kullanmadan hazırlanmış tablet öncelikli not alma uygulaması. Özel tipografi, sıcak kapaklar, kendi çizim motoru ve Papertrail'e özgü kontrollerle bir dijital kâğıt stüdyosu oluşturur.
 
 ## Android Studio'da çalıştırma
 
@@ -14,7 +14,10 @@ Bu çalışma ortamında Java/Android SDK kurulu olmadığından APK derlemesi b
 
 - Tablet kitaplığı: yeni defter, adla arama, favorileme, yeniden adlandırma ve silme
 - Çok sayfalı defterler; sayfa başına yerel otomatik kayıt ve sayfa gezgini
-- Kalem motoru: basınç duyarlı uç, Catmull–Rom eğri enterpolasyonu, yuvarlak uç/birleşimler, yumuşak uç inceltme ve hız arttıkça gecikmeyi azaltan ayarlanabilir jitter sabitleme
+- Kalem motoru: basınç duyarlı, EMA ile filtrelenmiş uç; Catmull–Rom merkez çizgisi; tek dolgulu vektör kontur; yuvarlak ve yumuşak uçlar; hız uyarlamalı sabitleme
+- Canlı kalem örnekleri ayrı çizim bileşeninde tutulur; kitaplık ve sayfa gezinme panelleri her örnekte yeniden oluşturulmaz
+- Basınçlı çizgi, çok sayıda segment/circle çizimi yerine tek bir doldurulmuş vektör konturla çizilir; sayfa verileri arka planda yüklenir ve yazılır
+- Kâğıt, tamamlanmış mürekkep ve canlı kalem ayrı GPU katmanlarında tutulur; pinch hareketi yalnızca katman dönüşümünü günceller
 - Ayarlardan yalnız-stylus çizim modu; parmak/avuç çizimini devre dışı bırakma
 - İki parmakla yakınlaştırma ve kaydırma; alt çubuktan zoom sıfırlama ve yüzde ayarı
 - Kalem, yarı saydam vurgulayıcı, silgi, metin ekleme, lasso seçimi
@@ -27,7 +30,7 @@ Bu çalışma ortamında Java/Android SDK kurulu olmadığından APK derlemesi b
 
 ## Bilinen sınırlar
 
-Bu sürüm internet bulut yedekleme/senkronizasyonu, PDF içe aktarma/üzerine yazma, gerçek parmak reddi ve doğal el yazısı OCR'sı içermez. Kalem basınç örneklemesini cihazın sağladığı pointer verisiyle sınırlar; farklı tablet/digitizer modellerinde gecikme ve basınç eğrisi değişebilir. Sayfa küçük listeleri metin önizlemesi yerine numaralı sayfa kartları gösterir. İngilizce string kaynak dosyası vardır, ancak mevcut ekran metinlerinin çoğu henüz yerelleştirilmemiştir.
+Bu sürüm internet bulut yedekleme/senkronizasyonu, PDF içe aktarma/üzerine yazma, gerçek parmak reddi ve doğal el yazısı OCR'sı içermez. Kalem basınç örneklemesini cihazın sağladığı pointer verisiyle sınırlar; farklı tablet/digitizer modellerinde gecikme ve basınç eğrisi değişebilir. Sayfa önizlemeleri çizgileri küçültülmüş şekilde gösterir; metin öğeleri henüz küçük resme dahil edilmez. İngilizce string kaynakları mevcut olsa da yeni özel arayüzün tüm metinleri henüz yerelleştirilmemiştir.
 
 ## Proje yapısı
 
