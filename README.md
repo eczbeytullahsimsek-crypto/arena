@@ -10,6 +10,10 @@ GoodNotes'tan ilham alan, Kotlin + Jetpack Compose Foundation üzerinde Material
 
 Bu çalışma ortamında Java/Android SDK kurulu olmadığından APK derlemesi burada doğrulanamadı. İlk Gradle eşitlemesi internet bağlantısı gerektirir.
 
+### GitHub üzerinden APK üretme
+
+`.github/workflows/android-apk.yml` iş akışı herhangi bir dala push yapıldığında, `main` için pull request açıldığında veya GitHub'daki **Actions → Build Android APK → Run workflow** adımıyla manuel başlatıldığında debug APK üretir. Tamamlanınca iş akışı çalışmasının altındaki **Artifacts → papertrail-debug-apk** bağlantısından APK'yı içeren ZIP'i indirip açın. Bu debug APK test/kişisel kurulum içindir; Google Play dağıtımı için imzalı release yapılandırması gerekir.
+
 ## Uygulama özellikleri
 
 - Tablet kitaplığı: yeni defter, adla arama, favorileme, yeniden adlandırma ve silme
