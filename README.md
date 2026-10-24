@@ -10,19 +10,24 @@ GoodNotes'tan ilham alan, Kotlin + Jetpack Compose ile hazırlanmış tablet ön
 
 Bu çalışma ortamında Java/Android SDK kurulu olmadığından APK derlemesi burada doğrulanamadı. İlk Gradle eşitlemesi internet bağlantısı gerektirir.
 
-## Şu anki özellikler
+## Uygulama özellikleri
 
-- Tablet genişliğine uyumlu kitaplık ve renkli, açılabilir defter kapakları
-- Yeni defter oluşturma, adla arama, yerel SharedPreferences kaydı
-- Basınca duyarlı stylus/touch çizim yüzeyi; kalem, vurgulayıcı ve silgi
-- Renk paleti, geri al/yinele, kalıcı çizgi verileri
-- Çizgili, kareli ve kenar çizgili sayfa şablonları
-- Sayfa ekleme kontrolleri, koyu görünüm, PDF dosyası oluşturma
-- Türkçe ve İngilizce Android string kaynakları
+- Tablet kitaplığı: yeni defter, adla arama, favorileme, yeniden adlandırma ve silme
+- Çok sayfalı defterler; sayfa başına yerel otomatik kayıt ve sayfa gezgini
+- Kalem motoru: basınç duyarlı uç, Catmull–Rom eğri enterpolasyonu, yuvarlak uç/birleşimler, yumuşak uç inceltme ve hız arttıkça gecikmeyi azaltan ayarlanabilir jitter sabitleme
+- Ayarlardan yalnız-stylus çizim modu; parmak/avuç çizimini devre dışı bırakma
+- İki parmakla yakınlaştırma ve kaydırma; alt çubuktan zoom sıfırlama ve yüzde ayarı
+- Kalem, yarı saydam vurgulayıcı, silgi, metin ekleme, lasso seçimi
+- Lasso ile birden fazla çizgiyi seçme, silme ve kopyalama
+- Serbest çizim, düz çizgi, dikdörtgen ve elips araçları
+- Renk paleti ve ayarlanabilir kalem ucu kalınlığı
+- Geri al/yinele, çizgili/kareli/kenar çizgili/boş kağıt şablonları
+- Koyu tema, yakınlaştırma kontrolleri, PDF'yi sistem dosya seçicisine dışa aktarma
+- Yerel not verisi Android SharedPreferences'ta saklanır
 
-## Bilinen prototip sınırları
+## Bilinen sınırlar
 
-Bu ilk dikey dilimdir: lasso, metin aracı, PDF'ye çizimlerin aktarılması, çok sayfalı not verisi/thumbnail'ları ve sistem paylaşım menüsü henüz tamamlanmadı. Çizim koordinatları sayfa piksel alanına göre saklanır; ekran boyutları arası ölçekleme ve gerçek sınırsız zoom/pan sıradaki geliştirme adımlarıdır. PDF dışa aktarma şu an şablonlu tek sayfalık bir önizleme oluşturur ve dosyayı uygulamanın önbelleğine yazar.
+Bu sürüm internet bulut yedekleme/senkronizasyonu, PDF içe aktarma/üzerine yazma, gerçek parmak reddi ve doğal el yazısı OCR'sı içermez. Kalem basınç örneklemesini cihazın sağladığı pointer verisiyle sınırlar; farklı tablet/digitizer modellerinde gecikme ve basınç eğrisi değişebilir. Sayfa küçük listeleri metin önizlemesi yerine numaralı sayfa kartları gösterir. İngilizce string kaynak dosyası vardır, ancak mevcut ekran metinlerinin çoğu henüz yerelleştirilmemiştir.
 
 ## Proje yapısı
 
