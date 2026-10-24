@@ -1,6 +1,7 @@
 package com.papertrail.notebook
 
 import android.graphics.Paint as NativePaint
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -14,6 +15,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -115,6 +118,14 @@ private fun PapertrailApp() {
     var selectedIndexes by remember { mutableStateOf<Set<Int>>(emptySet()) }
     val background = if (dark) Color(0xFF202722) else Paper
     val foreground = if (dark) Color(0xFFF0EEE7) else Ink
+    SideEffect {
+        (context as? Activity)?.window?.let { window ->
+            val editor = selected != null
+            window.statusBarColor = if (editor) android.graphics.Color.rgb(24,54,95) else android.graphics.Color.rgb(245,241,232)
+            window.navigationBarColor = if (editor) android.graphics.Color.rgb(24,54,95) else android.graphics.Color.rgb(245,241,232)
+            window.decorView.systemUiVisibility = if (editor) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        }
+    }
 
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri -> if (uri != null && selected != null) exportPdfToUri(context, uri, selected!!, pageCount, pageStyle) }
     fun saveBooks(value: List<Book>) { books = value; prefs.edit().putString("books", booksToJson(value)).apply() }
@@ -143,45 +154,34 @@ private fun PapertrailApp() {
                 onDelete = { deleteTarget = it })
         } else {
             Column(Modifier.fillMaxSize()) {
-                EditorHeader(selected!!, page, pageCount, foreground, dark, pageLoading,
-                    onBack = { savePage(); pageLoading = false; selected = null }, onUndo = { if (strokes.isNotEmpty()) { redo = redo + strokes.last(); strokes = strokes.dropLast(1); savePage() } },
-                    onRedo = { if (redo.isNotEmpty()) { strokes = strokes + redo.last(); redo = redo.dropLast(1); savePage() } },
+                EditorHeader(selected!!, page, pageCount, pageLoading,
+                    onBack = { savePage(); pageLoading = false; selected = null },
+                    onPrevious = { if(page>1)goToPage(page-1) },
+                    onNext = { if(page<pageCount)goToPage(page+1) },
                     onTemplates = { templateDialog = true }, onMore = { actionDialog = true })
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    Column(Modifier.width(78.dp).fillMaxHeight().background(if (dark) Color(0xFF242C27) else Color(0xFFEEEAE1)).padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Tool.entries.forEach { item -> ToolTile(item, tool == item, dark) { tool = item } }
-                        Box(Modifier.padding(horizontal = 17.dp, vertical = 10.dp).fillMaxWidth().height(1.dp).background(if (dark) Color(0xFF3B443D) else Line))
-                        listOf(Color(0xFF263E32), Color(0xFF385B8A), Color(0xFFBA554C), Color(0xFFE4A94F), Color(0xFF252525), Color(0xFF8D61A9)).forEach { inkColor ->
-                            Box(Modifier.padding(vertical = 4.dp).size(25.dp).clip(CircleShape).background(inkColor).then(if (inkColor == color) Modifier.border(2.dp, if (dark) Color.White else Moss, CircleShape) else Modifier).clickable { color = inkColor; if (tool == Tool.ERASER) tool = Tool.PEN })
-                        }
-                        Text("UÇ", Modifier.padding(top = 8.dp), color = Muted, fontSize = 8.sp, letterSpacing = 1.3.sp, fontWeight = FontWeight.Bold)
-                        MiniSlider(width, { width = it }, 1f..12f, Modifier.width(63.dp).padding(horizontal = 8.dp))
-                        Spacer(Modifier.weight(1f))
-                        if (selectedIndexes.isNotEmpty()) {
-                            ToolTile(Tool.ERASER, false, dark) { strokes = strokes.filterIndexed { i, _ -> i !in selectedIndexes }; selectedIndexes = emptySet(); selection = null; savePage() }
-                            Text("SİL", color = Muted, fontSize = 8.sp)
-                            Text("⧉", Modifier.padding(top = 5.dp).clip(CircleShape).clickable { val copies = selectedIndexes.mapNotNull { strokes.getOrNull(it) }.map { s -> s.copy(points = s.points.map { Offset(it.x + 22, it.y + 22) }) }; strokes += copies; selectedIndexes = emptySet(); selection = null; savePage() }.padding(10.dp), color = Moss, fontSize = 20.sp)
-                        }
-                    }
-                    DrawingSurface(
-                        modifier = Modifier.weight(1f).fillMaxHeight(), dark = dark, pageStyle = pageStyle,
-                        tool = tool, color = color, width = width, stabilization = stabilization, stylusOnly = stylusOnly,
-                        strokes = strokes, notes = notes, selection = selection, selectedIndexes = selectedIndexes, enabled = !pageLoading,
-                        zoomState = zoomState, panState = panState,
-                        onCommit = { ink -> strokes = strokes + ink; redo = emptyList(); savePage() },
-                        onMove = { moved, bounds -> strokes = moved; selection = bounds; savePage() },
-                        onSelect = { bounds, indexes -> selection = bounds; selectedIndexes = indexes },
-                        onText = { p -> textPosition = p; textInput = ""; textDialog = true },
-                        onZoomSettled = { zoomReadout = (it * 100).toInt() }
-                    )
-                    Column(Modifier.width(160.dp).fillMaxHeight().background(if(dark)Color(0xFF242C27)else Color(0xFFF0EDE6)).padding(12.dp)) {
-                        Row(verticalAlignment=Alignment.CenterVertically){Text("SAYFALAR",color=Muted,fontSize=9.sp,fontWeight=FontWeight.Bold,letterSpacing=1.5.sp);Spacer(Modifier.weight(1f));Text("${pageCount}",color=Muted,fontSize=10.sp)}
-                        Spacer(Modifier.height(12.dp))
-                        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(12.dp)) { items((1..pageCount).toList()) { p -> PageThumbnail(selected!!.id,p,p==page,dark,prefs,if(p==page)strokes.hashCode() else 0){goToPage(p)} } }
-                        ActionButton("+", "Yeni sayfa", true, Modifier.fillMaxWidth()){createPage()}
-                    }
+                EditorToolbar(tool, color, width, dark,
+                    onUndo = { if (strokes.isNotEmpty()) { redo = redo + strokes.last(); strokes = strokes.dropLast(1); savePage() } },
+                    onRedo = { if (redo.isNotEmpty()) { strokes = strokes + redo.last(); redo = redo.dropLast(1); savePage() } },
+                    onTool = { tool = it }, onColor = { color = it; if(tool==Tool.ERASER)tool=Tool.PEN },
+                    onWidth = { width = it }, onAddPage = { createPage() })
+                DrawingSurface(
+                    modifier = Modifier.weight(1f).fillMaxWidth(), dark = dark, pageStyle = pageStyle,
+                    tool = tool, color = color, width = width, stabilization = stabilization, stylusOnly = stylusOnly,
+                    strokes = strokes, notes = notes, selection = selection, selectedIndexes = selectedIndexes, enabled = !pageLoading,
+                    zoomState = zoomState, panState = panState,
+                    onCommit = { ink -> strokes = strokes + ink; redo = emptyList(); savePage() },
+                    onMove = { moved, bounds -> strokes = moved; selection = bounds; savePage() },
+                    onSelect = { bounds, indexes -> selection = bounds; selectedIndexes = indexes },
+                    onText = { p -> textPosition = p; textInput = ""; textDialog = true },
+                    onZoomSettled = { zoomReadout = (it * 100).toInt() }
+                )
+                Row(Modifier.fillMaxWidth().height(38.dp).background(if(dark)Color(0xFF18345B)else Color(0xFF244A7A)).padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically){
+                    Text("${page} / ${pageCount}",color=Color.White,fontSize=10.sp,fontWeight=FontWeight.SemiBold)
+                    Spacer(Modifier.width(16.dp));Text(if(pageLoading)"Sayfa yükleniyor…" else "Tüm değişiklikler kaydedildi",color=Color.White.copy(alpha=.75f),fontSize=9.sp)
+                    Spacer(Modifier.weight(1f))
+                    if(selectedIndexes.isNotEmpty()){Text("${selectedIndexes.size} öğe seçildi",color=Color.White,fontSize=9.sp);Text("Sil",Modifier.padding(horizontal=9.dp).clip(RoundedCornerShape(8.dp)).clickable{strokes=strokes.filterIndexed{i,_->i !in selectedIndexes};selectedIndexes=emptySet();selection=null;savePage()}.padding(6.dp),color=Color.White,fontSize=10.sp);Text("Kopyala",Modifier.padding(end=10.dp).clip(RoundedCornerShape(8.dp)).clickable{val copies=selectedIndexes.mapNotNull{strokes.getOrNull(it)}.map{s->s.copy(points=s.points.map{Offset(it.x+22,it.y+22)})};strokes+=copies;selectedIndexes=emptySet();selection=null;savePage()}.padding(6.dp),color=Color.White,fontSize=10.sp)}
+                    Text("${zoomReadout}%",color=Color.White,fontSize=10.sp);GlyphControl("−"){zoomState.floatValue=(zoomState.floatValue-.1f).coerceAtLeast(.55f);zoomReadout=(zoomState.floatValue*100).toInt()};GlyphControl("+"){zoomState.floatValue=(zoomState.floatValue+.1f).coerceAtMost(3f);zoomReadout=(zoomState.floatValue*100).toInt()};GlyphControl("↺"){zoomState.floatValue=1f;zoomReadout=100;panState.value=Offset.Zero}
                 }
-                Row(Modifier.fillMaxWidth().height(46.dp).background(if(dark)Color(0xFF242C27)else Color(0xFFF9F7F2)).padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically){Text("$page / $pageCount",color=Muted,fontSize=11.sp);Spacer(Modifier.weight(1f));Text("İki parmakla tuvali taşı ve yakınlaştır",color=Muted,fontSize=10.sp);Spacer(Modifier.width(18.dp));GlyphControl("−"){zoomState.floatValue=(zoomState.floatValue-.1f).coerceAtLeast(.55f);zoomReadout=(zoomState.floatValue*100).toInt()};Text("$zoomReadout%",color=foreground,fontSize=10.sp);GlyphControl("+"){zoomState.floatValue=(zoomState.floatValue+.1f).coerceAtMost(3f);zoomReadout=(zoomState.floatValue*100).toInt()};GlyphControl("↺"){zoomState.floatValue=1f;zoomReadout=100;panState.value=Offset.Zero}}
             }
         }
 
@@ -235,9 +235,39 @@ private fun PapertrailApp() {
     if(menu)PaperDialog(book.title,"Defter seçenekleri",{menu=false},{MenuRow("✎","Yeniden adlandır"){menu=false;onRename(book)};MenuRow("♡",if(book.favorite)"Favoriden çıkar" else "Favorilere ekle"){menu=false;onFavorite(book)};MenuRow("⌫","Defteri sil"){menu=false;onDelete(book)}})
 }
 
-@Composable private fun EditorHeader(book:Book,page:Int,count:Int,fg:Color,dark:Boolean,loading:Boolean,onBack:()->Unit,onUndo:()->Unit,onRedo:()->Unit,onTemplates:()->Unit,onMore:()->Unit){
-    Row(Modifier.fillMaxWidth().height(66.dp).background(if(dark)Color(0xFF242C27) else Color(0xFFFAF8F3)).padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically){GlyphControl("←",onBack);Spacer(Modifier.width(12.dp));Column{Text(book.title,color=fg,fontSize=14.sp,fontWeight=FontWeight.SemiBold);Text(if(loading)"SAYFA YÜKLENİYOR" else "SAYFA $page  /  $count",Modifier.padding(top=2.dp),color=Muted,fontSize=8.sp,letterSpacing=1.4.sp)};Spacer(Modifier.weight(1f));GlyphControl("↶",onUndo);GlyphControl("↷",onRedo);Spacer(Modifier.width(9.dp));ActionButton("▤","Kâğıt",false,onClick=onTemplates);Spacer(Modifier.width(8.dp));GlyphControl("···",onMore)}
+@Composable private fun EditorHeader(book:Book,page:Int,count:Int,loading:Boolean,onBack:()->Unit,onPrevious:()->Unit,onNext:()->Unit,onTemplates:()->Unit,onMore:()->Unit){
+    Row(Modifier.fillMaxWidth().height(48.dp).background(Color(0xFF28558E)).padding(horizontal=11.dp),verticalAlignment=Alignment.CenterVertically){
+            HeaderGlyph("‹",onBack);HeaderGlyph("▦",onTemplates);HeaderGlyph("⌕",onMore)
+            Spacer(Modifier.weight(1f));Text(book.title + if(loading) "  ·" else "",color=Color.White,fontSize=13.sp,fontWeight=FontWeight.SemiBold);Text("  ⌄",color=Color.White.copy(alpha=.8f),fontSize=12.sp);Spacer(Modifier.weight(1f))
+            HeaderGlyph("‹",onPrevious);Text("$page / $count",color=Color.White,fontSize=9.sp);HeaderGlyph("›",onNext);HeaderGlyph("♧",onMore);HeaderGlyph("⇧",onMore);HeaderGlyph("···",onMore)
+    }
 }
+
+@Composable private fun HeaderGlyph(glyph:String,onClick:()->Unit){Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).clickable(onClick=onClick),contentAlignment=Alignment.Center){Text(glyph,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Light)}}
+
+@Composable private fun EditorToolbar(tool:Tool,color:Color,width:Float,dark:Boolean,onUndo:()->Unit,onRedo:()->Unit,onTool:(Tool)->Unit,onColor:(Color)->Unit,onWidth:(Float)->Unit,onAddPage:()->Unit){
+    val toolbarBg=if(dark)Color(0xFF242C27)else Color(0xFFF4F4F3)
+    val availableColors=listOf(Color(0xFF252525),Color(0xFF263E32),Color(0xFF386BB7),Color(0xFFE45665),Color(0xFFE3A84A),Color(0xFF8D61A9))
+    Row(Modifier.fillMaxWidth().height(48.dp).background(toolbarBg).border(width=0.5.dp,color=if(dark)Color(0xFF3A443D)else Color(0xFFDDDEDF)).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically){
+        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()),verticalAlignment=Alignment.CenterVertically){
+            RibbonControl("↶",false,dark,onUndo)
+            RibbonControl("↷",false,dark,onRedo)
+            RibbonSeparator(dark)
+            Tool.entries.forEach{item->RibbonControl(item.glyph,tool==item,dark){onTool(item)}}
+            RibbonSeparator(dark)
+            availableColors.forEach{c->Box(Modifier.padding(horizontal=5.dp).size(18.dp).clip(CircleShape).background(c).then(if(c==color)Modifier.border(2.dp,Color.White,CircleShape).border(1.dp,Color(0xFF687682),CircleShape)else Modifier).clickable{onColor(c)})}
+            RibbonSeparator(dark)
+            Text("−",Modifier.padding(horizontal=6.dp),color=if(dark)Color.White else Ink,fontSize=12.sp)
+            MiniSlider(width,onWidth,1f..12f,Modifier.width(100.dp))
+            Text("+",Modifier.padding(horizontal=6.dp),color=if(dark)Color.White else Ink,fontSize=13.sp)
+            RibbonControl("▤",false,dark,onAddPage)
+        }
+        RibbonSeparator(dark)
+        Text("${width.toInt()} px",Modifier.padding(horizontal=5.dp),color=if(dark)Color.White else Muted,fontSize=9.sp)
+    }
+}
+@Composable private fun RibbonControl(glyph:String,active:Boolean,dark:Boolean,onClick:()->Unit){Column(Modifier.padding(horizontal=2.dp).fillMaxHeight().width(36.dp).clip(RoundedCornerShape(7.dp)).background(if(active)if(dark)Color(0xFF3C4B40)else Color(0xFFE0E8F0)else Color.Transparent).clickable(onClick=onClick),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text(glyph,color=if(active)Color(0xFF2864A3)else if(dark)Color(0xFFE8E7E2)else Color(0xFF555B62),fontSize=17.sp);if(active)Box(Modifier.padding(top=2.dp).width(14.dp).height(2.dp).background(Color(0xFF3779B8),CircleShape))}}
+@Composable private fun RibbonSeparator(dark:Boolean){Box(Modifier.padding(horizontal=7.dp).width(1.dp).height(21.dp).background(if(dark)Color(0xFF465047)else Color(0xFFD6D8DA)))}
 
 @Composable private fun ToolTile(tool:Tool,active:Boolean,dark:Boolean,onClick:()->Unit){val fg=if(dark)Color(0xFFEAE8E0)else Ink;Column(Modifier.width(64.dp).padding(vertical=3.dp).clip(RoundedCornerShape(15.dp)).background(if(active){if(dark)Color(0xFF3D4B40)else Color(0xFFDCE5DA)}else Color.Transparent).clickable(onClick=onClick).padding(vertical=7.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(tool.glyph,color=if(active)Moss else fg.copy(alpha=.72f),fontSize=20.sp,fontWeight=FontWeight.Medium);Text(tool.label,color=if(active)Moss else Muted,fontSize=8.sp,maxLines=1)} }
 private fun prepareThumbnailStroke(stroke:StrokeData):RenderedStroke{val stride=((stroke.points.size+79)/80).coerceAtLeast(1);if(stride==1)return prepareStroke(stroke);val indexes=stroke.points.indices.filter{it%stride==0||it==stroke.points.lastIndex};return prepareStroke(stroke.copy(points=indexes.map{stroke.points[it]},pressures=indexes.mapNotNull{stroke.pressures.getOrNull(it)}))}

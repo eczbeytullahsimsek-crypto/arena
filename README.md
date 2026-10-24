@@ -1,6 +1,6 @@
 # Papertrail — Android tablet not defteri
 
-GoodNotes'tan ilham alan, Kotlin + Jetpack Compose Foundation üzerinde Material 3 bileşenleri kullanmadan hazırlanmış tablet öncelikli not alma uygulaması. Özel tipografi, sıcak kapaklar, kendi çizim motoru ve Papertrail'e özgü kontrollerle bir dijital kâğıt stüdyosu oluşturur.
+GoodNotes'tan ilham alan, Kotlin + Jetpack Compose Foundation üzerinde Material 3 kullanmadan hazırlanmış tablet not alma uygulaması. Editör; referans alınan tablet düzenine uygun mavi gezinme şeridi, yatay araç/renk paleti ve geniş beyaz yazı tuvaliyle özel olarak tasarlanmıştır.
 
 ## Android Studio'da çalıştırma
 
